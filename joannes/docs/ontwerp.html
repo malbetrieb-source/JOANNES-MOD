@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>JOANNES-MOD ontwerp</title>
+<style>
+  @page { size: A4; margin: 20mm 20mm 22mm 20mm; }
+  :root {
+    --teal: #1f5c57; --ink: #1f2a2c; --muted: #5b6668; --rule: #cbd6d5; --alt: #e7efee;
+  }
+  html, body { background: #fff; }
+  body { font-family: "Carlito", "Calibri", sans-serif; font-size: 10.4pt; line-height: 1.4; color: var(--ink); margin: 0; }
+  .eyebrow { font-variant: small-caps; letter-spacing: .08em; color: var(--muted); font-size: 10pt; margin-bottom: 4pt; }
+  h1 { font-family: "Caladea", "Cambria", serif; font-size: 24pt; line-height: 1.15; margin: 0 0 4pt; color: var(--ink); }
+  .subtitle { font-style: italic; color: var(--muted); font-size: 12pt; margin: 0 0 10pt; }
+  .headrule { border: 0; border-top: 3px solid var(--teal); margin: 0 0 12pt; }
+  .addr { display: flex; gap: 24pt; margin-bottom: 6pt; }
+  .addr div { flex: 1; }
+  .addr .lbl { font-variant: small-caps; letter-spacing: .06em; color: var(--muted); font-size: 9.5pt; }
+  .date { color: var(--muted); margin-bottom: 14pt; }
+  h2 { font-family: "Caladea", "Cambria", serif; color: var(--teal); font-size: 15pt; margin: 14pt 0 5pt;
+       padding-bottom: 3pt; border-bottom: 1px solid var(--rule); break-after: avoid; }
+  h3 { font-family: "Carlito", sans-serif; font-weight: bold; font-size: 11pt; margin: 10pt 0 3pt; color: #000; break-after: avoid; }
+  p { margin: 0 0 6pt; }
+  ul { list-style: none; padding-left: 14pt; margin: 0 0 7pt; }
+  ul li { position: relative; margin-bottom: 3pt; }
+  ul li::before { content: "–"; position: absolute; left: -12pt; color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 4pt; font-size: 10pt; break-inside: avoid; }
+  th { background: var(--teal); color: #fff; font-weight: bold; text-align: left; padding: 5pt 7pt; }
+  td { padding: 5pt 7pt; vertical-align: top; }
+  tbody tr:nth-child(even) td { background: var(--alt); }
+  .note { font-style: italic; color: var(--muted); font-size: 9.5pt; margin-top: 3pt; }
+  .callout { border-left: 3px solid var(--teal); background: var(--alt); padding: 7pt 10pt; margin: 8pt 0; break-inside: avoid; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Technisch ontwerp · versie 0.1</div>
+<h1>JOANNES-MOD voor de Elektron Model:Cycles</h1>
+<p class="subtitle">Uitgangspunten, functies en werkwijze voor een stabiele firmware-mod</p>
+<hr class="headrule">
+
+<div class="addr">
+  <div><div class="lbl">Aan</div>Projectdossier JOANNES-MOD<br>Fork van Modded-Cycles (MIT)</div>
+  <div><div class="lbl">Van</div>Niels Schilder<br>De Robotfabriek<br>Kakewei 2D, 9051 BZ Stiens</div>
+</div>
+<div class="date">Stiens, 11 oktober 2026</div>
+
+<h2>Aanleiding</h2>
+<p>De JOANNES-MOD brengt de denkwijze van de JOANNES-app naar de Model:Cycles: muzikale generatoren per track, een 909 die zo dicht mogelijk bij het origineel komt en een eigen rave-stab engine. Daarbij hoort een vaste belofte: met één klik terug naar het officiële OS van Elektron.</p>
+<p>De mod bouwt voort op <strong>Modded-Cycles</strong> (Maxime / 18nelli18, MIT-licentie). Dat project heeft de firmware van OS 1.13 grondig in kaart gebracht, heeft een eigen bouw-gereedschap in Python, een emulator die de echte OS-code draait en een web-flasher. De JOANNES-MOD wordt een fork daarvan: we voegen onze functies toe als losse tweaks volgens dezelfde regels, zodat ze ook met de mods van dat project te combineren blijven.</p>
+
+<h2>Uitgangspunten</h2>
+<p>Stabiliteit en betrouwbaarheid gaan boven alles. Daarom gelden deze regels voor elke functie:</p>
+<ul>
+  <li><strong>Alleen het MAIN OS wordt aangepast.</strong> Bootloader en updater blijven byte-voor-byte die van Elektron. Daardoor werkt het herstelmenu (FUNC + aanzetten, TRIG 4, via MIDI IN) altijd.</li>
+  <li><strong>Elke functie is een losse, uitschakelbare tweak.</strong> Gaat er iets mis, dan flash je opnieuw zonder die ene functie.</li>
+  <li><strong>USB-updates blijven werken.</strong> We bouwen alleen op varianten die het updaten via USB intact laten.</li>
+  <li><strong>Projecten blijven compatibel.</strong> Geen wijzigingen aan het opslagformaat; nieuwe instellingen alleen in bytes die het OS al bewaart maar niet gebruikt.</li>
+  <li><strong>Eerst bewezen in de emulator.</strong> Elke tweak krijgt een test die de echte OS-code draait, origineel tegenover gewijzigd, ook in combinatie met de andere mods.</li>
+  <li><strong>Eén functie per hardwaretest.</strong> Een functie heet pas ‘getest’ als Niels hem op zijn eigen Model:Cycles heeft bevestigd.</li>
+  <li><strong>Geen firmware van Elektron in de repository.</strong> Iedereen bouwt vanuit zijn eigen officiële OS-bestand.</li>
+</ul>
+
+<h2>Wat er al bestaat</h2>
+<p>Bij nadere inspectie is Modded-Cycles veel verder dan de projectpagina laat zien. Er zijn inmiddels ruim vijftig technische notities en onder meer: een arpeggiator, een diatonisch akkoordenklavier met toonladderkeuze per pattern, de MACRO-machine met de 47 modellen van Mutable Instruments Braids, motoren uit de Syntakt, een filter per track en <strong>Model-TG</strong>, een sampler-machine van TinyGregAudio.</p>
+<div class="callout"><strong>Correctie op eerder advies.</strong> Eerder schreef ik dat samples afspelen op de Cycles buiten bereik lag. Dat klopte met de oudere haalbaarheidsnotitie, maar Model-TG heeft dat inmiddels opgelost. Dat opent een tweede route voor de 909 (zie hieronder).</div>
+
+<h2>De functies</h2>
+
+<h3>Terug naar origineel</h3>
+<p>Het lopende OS van de Cycles accepteert een update via het protocol van Elektron Transfer zonder dat je eerst een menu hoeft te openen; de machine vraagt alleen op het scherm om bevestiging. Dat is in het project al op echte hardware getest, ook onder gemodde firmware.</p>
+<ul>
+  <li><strong>Werking:</strong> een knop ‘Terug naar origineel’ in de flasher stuurt je eigen, ongewijzigde OS-bestand. Jij bevestigt op de Cycles en de machine start op met het officiële OS.</li>
+  <li><strong>Firmware-wijziging:</strong> geen. De herstelroute is volledig de code van Elektron, en dus de meest betrouwbare die er is.</li>
+  <li><strong>Voorwaarde:</strong> geen enkele JOANNES-tweak mag de afhandeling van Transfer aanraken. Dit wordt een vaste controle in de tests.</li>
+  <li><strong>Vangnet:</strong> lukt het via USB niet, dan blijft het herstelmenu via MIDI IN beschikbaar.</li>
+  <li><strong>Projecten na het terugzetten:</strong> uit de emulatietests van het project blijkt dat het officiële OS een onbekende machine niet laat crashen: de track speelt als CHORD en het scherm toont ‘Error’. De herstelpagina waarschuwt daarom om zulke tracks eerst op een standaardmachine te zetten.</li>
+</ul>
+
+<h3>Random generators per track</h3>
+<p>Net als in JOANNES: per track een generate-actie die een muzikaal patroon schrijft dat bij de machine en de toonladder past, geen losse willekeurige trigs.</p>
+<ul>
+  <li><strong>Machinebewust:</strong> een KICK-track krijgt een kickpatroon volgens een genre-archetype (four-on-the-floor, gesyncopeerd, half-time); TONE en CHORD krijgen een melodie of progressie in de gekozen toonladder.</li>
+  <li><strong>Toonladder:</strong> waar mogelijk sluiten we aan op de toonladder die het akkoordenklavier al per pattern opslaat, inclusief de JOANNES-les dat ‘de N-de trap’ bij pentatonische toonladders anders werkt.</li>
+  <li><strong>Locks:</strong> bijvoorbeeld noten vasthouden en alleen het ritme opnieuw rollen.</li>
+  <li><strong>Veilig schrijven:</strong> de Cycles houdt twee kopieën van een pattern bij, één voor de interface en één voor de sequencer. Bij de arpeggiator leidde precies dat tot een fout. De generator schrijft daarom via dezelfde OS-functies die live-opname gebruikt, zodat beide kopieën kloppen.</li>
+  <li><strong>Nooit automatisch opslaan:</strong> de generator schrijft alleen in het actieve pattern in het werkgeheugen. Bevalt het niet, dan laad je het pattern opnieuw.</li>
+</ul>
+<p>Wat al bekend is: patterns staan in een vaste geheugenbank, met per track een blok van 722 bytes, en het OS kopieert ze veld voor veld bij laden en opslaan. Welke ongebruikte, wel opgeslagen byte we voor de generator-instellingen nemen, moet nog worden onderzocht; byte +512 is al door de arpeggiator in gebruik.</p>
+
+<h3>909-machines</h3>
+<p>Twee routes, die elkaar aanvullen:</p>
+<ul>
+  <li><strong>Gesynthetiseerd (de mod):</strong> een eigen machine in C, gebouwd zoals SD VINTAGE en MACRO. Bassdrum, snare, toms, rimshot en clap worden gemodelleerd naar het analoge origineel en gemeten tegen referentie-opnames, met dezelfde meetmethode waarmee de JO909-ride is afgestemd. Hi-hats en bekkens zijn op een echte 909 samples; die benaderen we synthetisch.</li>
+  <li><strong>Met samples (direct bruikbaar):</strong> via de Model-TG-sampler kun je je eigen 909-samples laden. Dat komt het dichtst bij het origineel, maar die samples leveren wij niet mee vanwege auteursrecht.</li>
+</ul>
+
+<h3>Rave-stab engine</h3>
+<p>Een nieuwe machine met de akkoordstem binnen één stem, zoals CHORD dat al doet: ontstemde zaagtanden, klassieke stab-voicings (mineur 7, ‘hoover’-stapeling) en een eigen filterenvelop. Eerst controleren we wat MACRO (Braids) al dichtbij biedt, zodat we niets dubbel bouwen. De rekenbelasting meten we in de emulator voordat er iets op hardware gaat.</p>
+
+<h3>Bewust buiten scope</h3>
+<p>De master-bus met compressor, parametrische EQ en stereo-widener valt af: te veel risico voor een stabiele mod. Wie stems via de 6-kanaals USB-mod opneemt, doet die bewerking beter in de DAW.</p>
+
+<h2>Werkwijze en volgorde</h2>
+<table>
+  <thead><tr><th style="width:22%">Fase</th><th>Inhoud</th><th style="width:30%">Klaar als</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1 · Basis</strong></td><td>Fork JOANNES-MOD, bouwomgeving en emulator draaiend, ‘Terug naar origineel’ in de flasher, onderzoek naar de pattern-structuur in het geheugen.</td><td>Herstel getest op de Cycles; pattern-notitie geschreven.</td></tr>
+    <tr><td><strong>2 · Generators</strong></td><td>Random generators per track met toonladder, archetypes en locks.</td><td>Bewezen in emulatie, daarna getest op de Cycles.</td></tr>
+    <tr><td><strong>3 · Machines</strong></td><td>Rave-stab engine, daarna de 909-machine.</td><td>Gemeten, bewezen en per machine getest.</td></tr>
+  </tbody>
+</table>
+<p class="note">Elke stap volgt de vaste route: notitie, generator, emulatiebewijs, controle op overlap met andere mods, en pas dan een hardwaretest door Niels.</p>
+
+<h2>Wat ik nodig heb</h2>
+<ul>
+  <li><strong>De fork:</strong> op github.com/18nelli18/Modded-Cycles op ‘Fork’ klikken, als naam <em>JOANNES-MOD</em> invullen en daarna laten weten dat het klaar is.</li>
+  <li><strong>Een MIDI-interface</strong> aan de MIDI IN van de Cycles, als verplicht vangnet vóór de eerste flash.</li>
+  <li><strong>Het officiële OS-bestand</strong> <code>model-cycles_OS1.13.syx</code> van elektron.se, voor de bouw en de emulator.</li>
+  <li><strong>Later:</strong> referentie-opnames van een echte 909 voor de metingen.</li>
+</ul>
+
+<h2>Open vragen</h2>
+<ul>
+  <li>Welke knoppencombinatie voor ‘generate’ per track, zonder te botsen met bestaande functies en mods?</li>
+  <li>Willen we de tweaks later ook aanbieden aan het Modded-Cycles-project? Dan schrijven we de technische notities in hun conventie (Frans).</li>
+</ul>
+
+</body>
+</html>
