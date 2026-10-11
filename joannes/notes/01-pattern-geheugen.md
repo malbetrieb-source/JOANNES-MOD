@@ -90,4 +90,19 @@ dezelfde meldingen, en opslaan via de normale weg.
 1. ~~Noot en velocity vastleggen~~ gedaan (§2b).
 2. ~~Vrije byte zoeken~~ gedaan (§4): advies versie 1 zonder opslag.
 3. Uitzoeken hoe het track-object voor een gegeven track wordt opgehaald (upstream 32: `0x4000cfcc(0x4000f208(…), track)`).
-4. Een vrije knoppencombinatie kiezen voor *generate*.
+4. Een vrije knoppencombinatie kiezen voor *generate* (§6).
+
+## 6. Knoppencombinatie: TRK + RETRIG is niet vrij
+
+Voorstel van Niels (11/10/2026): TRK + RETRIG voor *generate*.
+
+- `[FEIT]` Toetscodes voor `0x4007faf4(code)` (= is de toets ingedrukt): FUNC 1, TRK 2, RETRIG 4, MACHINES 5,
+  PAGE 15 (upstream 32, 44, 47, 53).
+- `[FEIT]` `0x4001d506`, gebeurtenis-afhandeling van het OS zelf: bij **loslaten van RETRIG** wordt byte +112 van
+  het interface-object `TRK ingedrukt`; bij **loslaten van TRK** wordt het `RETRIG niet ingedrukt`.
+- `[FEIT]` Die byte wordt gelezen in de afhandeling van gespeelde noten met retrig (`0x4001d35a`/`0x4001d360`,
+  daarna `0x4001d05e`): ze bepaalt of een retrig na het loslaten doorloopt.
+- `[HYP]` Het originele OS gebruikt TRK tijdens RETRIG dus om een **retrig vast te zetten** (latch). Te controleren
+  op de machine: noot + RETRIG vasthouden, TRK indrukken, RETRIG loslaten: blijft de roffel doorlopen?
+- **Gevolg:** *generate* op TRK + RETRIG zou afgaan op hetzelfde moment dat iemand een roffel vastzet. Niet
+  gebruiken. Andere combinatie zoeken en op dezelfde manier controleren.
