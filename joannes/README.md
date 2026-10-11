@@ -27,6 +27,18 @@ we nieuwe upstream-versies zonder conflicten kunnen binnenhalen. Onze tweaks vol
 - Projectformaat blijft ongewijzigd.
 - Nooit firmware van Elektron in de repository (`firmware/` is uitgesloten via `.gitignore`).
 
+## Installeren moet simpel zijn
+
+Vaste regel (Niels, 11/10/2026): de bestaande manieren om mods te installeren zijn te ingewikkeld. De JOANNES-MOD
+installeer je zo:
+
+- één webpagina, die je Model:Cycles via USB zelf herkent;
+- twee knoppen: **JOANNES-MOD installeren** en **Terug naar origineel**; geen lijst met vinkjes;
+- het officiële OS-bestand hoef je maar één keer te kiezen: de pagina onthoudt het in je browser, dus een update is
+  daarna één klik;
+- de snelle USB-route (geen menu op de Cycles nodig; alleen bevestigen op het scherm);
+- alle uitleg in gewone taal, zonder technische termen.
+
 ## Documenten
 
 - [Ontwerp v0.1 (PDF)](docs/JOANNES-MOD%20ontwerp%20v0.1.pdf)

@@ -106,3 +106,17 @@ Voorstel van Niels (11/10/2026): TRK + RETRIG voor *generate*.
   op de machine: noot + RETRIG vasthouden, TRK indrukken, RETRIG loslaten: blijft de roffel doorlopen?
 - **Gevolg:** *generate* op TRK + RETRIG zou afgaan op hetzelfde moment dat iemand een roffel vastzet. Niet
   gebruiken. Andere combinatie zoeken en op dezelfde manier controleren.
+
+### 6b. Waar de trackkeuze zit
+
+- `[FEIT]` Huidige track: `0x40012412(project)` geeft veld +4 van de projectdata (via `vtable[40]`); het project
+  komt van `0x4000eb90(0x400cf866())`.
+- `[FEIT]` Track kiezen: `0x40023c90(track)` begrenst op 0…5, doet niets als het al de huidige track is, en roept
+  `0x40013aca` en de eigenlijke setter `0x40013a4a` (schrijft veld +4) aan; daarna wordt het scherm bijgewerkt.
+- `[FEIT]` De enige directe aanroeper van `0x40023c90` is `0x4001d36a`, in de afhandeling van de **pads** (dezelfde
+  functie die de RETRIG/TRK-vlag van §6 leest). Trackkeuze = TRK + pad; de stap-toetsen (TRIG 1–16) doen dat niet.
+- `[FEIT]` `probe_keys.py`: in de patroonweergave plaatst TRK + TRIG *n* gewoon een trig op stap *n*, net als
+  zonder TRK. Die opstelling draait niet de pad-afhandeling; voor een uitspraak over vrije combinaties moet de
+  probe naar `0x4001d3de` en omgeving worden uitgebreid.
+- Gevolg voor *generate*: de natuurlijke plek is ook de pad-afhandeling (welke track = welke pad). Kandidaat om te
+  controleren: een combinatie met een pad die het OS nu negeert.
