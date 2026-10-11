@@ -26,21 +26,31 @@ Uit de laad-routine `0x4005b4ec`: een lus van 64 stappen kopieert één 16-bits 
 | Offset in B | Grootte | Inhoud | Bron |
 |---|---|---|---|
 | +0 | 64 × woord | stapwoord: vlaggen per stap (bit 0 = trig aan, `0x8000` = retrig) | `[FEIT]` bit 0: `0x40017aee`; `0x8000`: upstream 32 |
-| +128 | 64 × byte | veld met standaardwaarde −1 (setter `0x400166c2`) | `[HYP]` noot of velocity, −1 = standaard van de track |
+| +128 | 64 × byte | **velocity** 0…127; −1 = standaardvelocity van de track (setter `0x400166c2`) | `[FEIT]` live-opname: bericht +17 → deze setter (§2b); emulatie |
 | +192 | 64 × byte | trig-lengte (setter `0x40016742`) | `[FEIT]` upstream 32 §11 noemt deze setter de lengte |
-| +256 | 64 × byte | begrensd op −23…+23 (setter `0x400167bc`) | `[HYP]` micro-timing (Elektron: ±23) |
+| +256 | 64 × byte | **micro-timing** −23…+23; de setter krijgt waarde + 64 (setter `0x400167bc`) | `[FEIT]` emulatie; live-opname telt 64 op |
 | +320 | 64 × byte | begrensd op 0…127 (setter `0x400168da`) | `[FEIT]` retrig-lengte (upstream 32 §11) |
 | +384 | 64 × byte | begrensd op 0…16 (setter `0x40016850`) | `[FEIT]` retrig-snelheid |
-| +448 | 64 × byte | begrensd op 0…127 (setter `0x40016964`) | `[HYP]` retrig-velocitycurve |
-| +512 | 4 bytes | track-instellingen; +512 = arpeggiator, +514 = `Rte` | `[FEIT]` upstream 32 §4 |
-| +516 | 64 × byte | waarde −1 of 63 (setter `0x40016010`) | `[HYP]` trig-conditie |
-| +580 | 64 × byte | standaardwaarde −1 (setter `0x40016642`) | `[HYP]` noot of velocity |
-| +644 | 64 × byte | begrensd op 0…127 (setter `0x4001653e`, ook `0x400165d6`) | `[HYP]` noot of velocity |
+| +448 | 64 × byte | 0…127 bovengrens, negatief ongemoeid (setter `0x40016964`) | `[HYP]` retrig-velocitycurve |
+| +512 | 4 bytes | +512 vrij voor mods (bits 0–4 arpeggiator); +513 retrig `Len`, +514 `Rte`, +515 heeft eigen accessors (betekenis `[HYP]`, vermoedelijk retrig-velocity) | `[FEIT]` upstream 32 §4; accessors van 513–515 gevonden |
+| +516 | 64 × byte | −1 of waarde (setter `0x40016010`); deze setter kijkt **niet** naar de tracklengte | `[FEIT]` gedrag (emulatie); betekenis `[HYP]` trig-conditie |
+| +580 | 64 × byte | **noot** 0…127; −1 = standaardnoot van de track (setter `0x40016642`) | `[FEIT]` live-opname: bericht +16 → deze setter (§2b); emulatie |
+| +644 | 64 × byte | 0…127, daarbuiten wordt niets geschreven (setter `0x4001653e`) | `[HYP]` betekenis onbekend; generator laat dit veld op de standaard |
 | +708 … | losse bytes | track-parameters | `[FEIT]` gekopieerd met grenscontroles |
 | +713 | woord | tracklengte, 2…64, anders 16 | `[FEIT]` `0x4005b58c`, gelezen door `0x40016402` |
 
-De drie kandidaten voor noot en velocity (+128, +580, +644) moeten in de emulator worden vastgesteld: een trig
-schrijven met een bekende noot en velocity en kijken welke bytes veranderen.
+### 2b. Hoe noot en velocity zijn vastgesteld
+
+`[FEIT]` Live-opname: `0x40007266` roept `0x40012158` aan met (…, track = bericht +8, **noot = bericht +16**,
+**velocity = bericht +17**, …, stap = +28, micro = +30). In `0x40012158` gaat het 3e argument (noot) naar de setter
+van +580 (`0x400121fc`) en het 4e (velocity) naar die van +128 (`0x4001225a`); de micro-timing gaat met + 64 naar
+`0x400167bc`.
+
+`[FEIT]` Nieuwe trig (`0x400169f0`, emulatie): velocity, noot, lengte, +516 en +644 op −1 (standaard van de track),
+retrig-lengte 46, retrig-snelheid 9.
+
+Alles hierboven met *emulatie* is gecontroleerd door `joannes/tools/probe_steps.py`, die de echte setters van het
+officiële OS 1.13 draait op een nep-track (13 controles, alle groen).
 
 ## 3. Veilig schrijven: de setters van het OS
 
@@ -63,15 +73,21 @@ dezelfde meldingen, en opslaan via de normale weg.
 
 - **Projecten blijven compatibel:** de generator schrijft alleen bestaande velden. Een gegenereerd patroon is gewone
   Cycles-data en opent ook op het officiële OS.
-- **Ruimte voor instellingen** (genre, locks): byte +512 is bezet door de arpeggiator. Nog te zoeken: een andere
-  byte die wel wordt opgeslagen maar niet gebruikt. Bytes 513 en 515 (gekopieerd in `0x4005b55a…`) zijn kandidaten
-  `[HYP]`.
+- **Ruimte voor instellingen** (genre, locks). `[FEIT]` Bytes 513–515 zijn **niet** vrij: het OS heeft er
+  getters en setters voor (513: `0x4001613e`/`0x40016188`, 515: `0x400161d2`/`0x4001621e`); 513 en 514 zijn de retrig-
+  instellingen. Wat overblijft:
+  - per track: bits 5–7 van byte +512 (de arpeggiator gebruikt 0–4); upstream 42 vond dat te weinig voor zijn doel;
+  - per pattern: de kop van 64 bytes (`B+30642`). Het OS leest daar velden 0–28 en 38 en bewaart de rest; het
+    akkoordenklavier (upstream 42) neemt 32–35 (handtekening) en 40–63. Vrij lijken 29–31, 36, 37 en 39 `[HYP]`,
+    nog na te lopen in de emulator.
+  - **Advies voor versie 1: niets opslaan.** De generator-instellingen leven alleen in het werkgeheugen (na
+    aanzetten terug naar de standaard). Dan verandert er niets aan wat er wordt opgeslagen, en is botsen met andere
+    mods uitgesloten. Toonladder: overnemen van het akkoordenklavier als dat in het pattern staat.
 - **Niet automatisch opslaan:** de generator roept nooit de opslag-routine aan.
 
 ## 5. Volgende stappen
 
-1. Emulatietest: via `0x400179ce` en de losse setters een trig met bekende waarden schrijven, de 722 bytes vóór en
-   na vergelijken, en zo de drie `[HYP]`-velden vastleggen.
-2. Nagaan welke van de bytes 513 en 515 vrij zijn (welke code ze leest).
+1. ~~Noot en velocity vastleggen~~ gedaan (§2b).
+2. ~~Vrije byte zoeken~~ gedaan (§4): advies versie 1 zonder opslag.
 3. Uitzoeken hoe het track-object voor een gegeven track wordt opgehaald (upstream 32: `0x4000cfcc(0x4000f208(…), track)`).
 4. Een vrije knoppencombinatie kiezen voor *generate*.

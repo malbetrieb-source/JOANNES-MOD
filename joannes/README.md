@@ -30,4 +30,4 @@ we nieuwe upstream-versies zonder conflicten kunnen binnenhalen. Onze tweaks vol
 ## Documenten
 
 - [Ontwerp v0.1 (PDF)](docs/JOANNES-MOD%20ontwerp%20v0.1.pdf)
-- [Notitie 01: pattern-geheugen](notes/01-pattern-geheugen.md)
+- [Notitie 01: pattern-geheugen](notes/01-pattern-geheugen.md), bewijs: `python3 joannes/tools/probe_steps.py --cycles firmware/model-cycles_OS1.13.syx`
