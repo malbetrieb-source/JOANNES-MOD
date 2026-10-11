@@ -90,7 +90,9 @@ dezelfde meldingen, en opslaan via de normale weg.
 1. ~~Noot en velocity vastleggen~~ gedaan (§2b).
 2. ~~Vrije byte zoeken~~ gedaan (§4): advies versie 1 zonder opslag.
 3. Uitzoeken hoe het track-object voor een gegeven track wordt opgehaald (upstream 32: `0x4000cfcc(0x4000f208(…), track)`).
-4. Een vrije knoppencombinatie kiezen voor *generate* (§6).
+4. ~~Een vrije knoppencombinatie kiezen voor *generate*~~ gedaan (§7): **BACK + pad**, wacht op bevestiging door
+   Niels op de machine.
+5. De hook in PadsView ontwerpen (§7d) en de generator zelf (genres, kansen per stap).
 
 ## 6. Knoppencombinatie: TRK + RETRIG is niet vrij
 
@@ -120,3 +122,84 @@ Voorstel van Niels (11/10/2026): TRK + RETRIG voor *generate*.
   probe naar `0x4001d3de` en omgeving worden uitgebreid.
 - Gevolg voor *generate*: de natuurlijke plek is ook de pad-afhandeling (welke track = welke pad). Kandidaat om te
   controleren: een combinatie met een pad die het OS nu negeert.
+
+## 7. Vrije combinatie voor *generate*: BACK + pad
+
+Onderzoek van 11/10/2026. Bewijs: `python3 joannes/tools/probe_pads.py --cycles firmware/model-cycles_OS1.13.syx`
+(echte OS-code, stock, alle controles groen).
+
+### 7a. Toetscodes
+
+`[FEIT]` De testvolgorde van de fabriekstest (`0x4010a9e0`, codes) naast de namenlijst (`0x4010a870`) en de
+handleiding geven de logische codes van `0x4007faf4` en `KeyEvent+12`:
+
+| Code | Toets | Code | Toets | Code | Toets |
+|---|---|---|---|---|---|
+| 1 | FUNC | 6 | PUNCH | 11 | STOP |
+| 2 | TRACK | 7 | GATE | 12 | **BACK** |
+| 3 | PATTERN | 8 | LFO | 13 | SETTINGS |
+| 4 | RETRIG | 9 | RECORD | 14 | TEMPO |
+| 5 | MACHINES | 10 | PLAY | 15 | PAGE |
+
+16…31 zijn TRIG 1…16. (De fabriekstest gebruikt namen van de Model:Samples: WAVE = MACHINES, LOOP = PUNCH,
+FLIP = GATE; code 5 = MACHINES klopt met upstream 47.)
+
+### 7b. Wie leest een pad?
+
+`[FEIT]` De enige code die de pad-velden van een PadEvent leest (`0x400740ca`, `0x400740d4`, `0x400740e4`, `0x400740f2`):
+PadsView `0x4001d180`, PatternAndBankSelectView `0x40020060`, QuickMuteMenuView `0x4002350a`, BankSelectMenuView en
+VolumeControllerView (`0x40024948`, menu), AudioSettingsMenuView (menu) en twee fabriekstests. Alle views worden één
+keer gemaakt bij het opstarten (MainScreenView, `0x4001ba7e`…).
+
+`[FEIT]` (probe, deel 1) Elke toets 1…31 ingedrukt + T3:
+
+- TRACK: alleen track kiezen, geen noot; PATTERN: bank kiezen, pad afgevangen; RETRIG: noot met retrig-snelheid;
+- FUNC: QuickMuteMenuView maakt van elke pad een mute; die view komt pas in beeld na een FUNC-druk
+  (sprongtabel van MainScreenView, code 1 → `0x4001c5f2` test MainScreenView+236 = de QuickMute-view);
+- **alle andere toetsen, ook BACK: precies hetzelfde als de pad alleen** (track kiezen en spelen).
+
+`[FEIT]` (forum, Model:Cycles tips) Een TRIG-toets vasthouden + pad = velocity van die stap invoeren. Dat loopt niet
+via deze afnemers (`[HYP]` via de live-opname); TRIG + pad is dus bezet.
+
+### 7c. Wat doet de toets zelf?
+
+`[FEIT]` MainScreenView::consumeKeyEvent (`0x4001c0d2`) springt per code via een tabel (`0x4001c100`). Vlaggen van
+`KeyEvent+16` (upstream 33): bit 0 appui, 1 FUNC, 2 dubbel, 3 maintien, 4 relâché, 5 lang.
+
+| Toets | Op het hoofdscherm | Bruikbaar? |
+|---|---|---|
+| MACHINES, LFO, TEMPO | opent het menu bij het indrukken | nee: pads werken daar anders (bv. preset beluisteren) |
+| PUNCH | zet punch aan/uit bij het indrukken | nee: hoorbaar |
+| GATE | bij loslaten (met FUNC: CLICK-menu) | alleen als we het loslaten onderdrukken |
+| SETTINGS | loslaten opent CONFIG; lang vasthouden `0x40039570` | alleen met onderdrukken |
+| PAGE | pagina kiezen, vasthouden = FILL | nee: hoorbaar |
+| RECORD, PLAY, STOP | transport (basis `0x40075f3c`; met FUNC kopiëren/wissen/plakken) | nee |
+| **BACK** | **niets**; alleen na ~0,5 s vasthouden (bit 5) `0x40076afe` = open menu's sluiten | **ja** |
+
+`[FEIT]` (probe, deel 2 en 3) Met de echte toetsinterruptie en toetsklok: BACK kort geeft *appui* (0x01) en
+*relâché* (0x10); BACK lang geeft daarna elke ~67 ms *maintien* (0x09) en na ~530 ms één keer 0x29. MainScreenView
+laat elk van die events onaangeroerd door (basis-afhandeling, niet afgevangen), behalve 0x29: open menu's sluiten,
+wat op het hoofdscherm niets doet. PatternGridView plaatst of wist niets.
+
+`[FEIT]` Code 12 wordt verder alleen gelezen door menu's, pop-ups en vensters (o.a. BankSelectMenuView,
+NoteVelocityView, TempoMenuView, SwingMenuView, alle VerticalMenu-afgeleiden, VolumeControllerView/PopupWindow,
+DrumSelect): daar betekent BACK "terug". Op het hoofdscherm zonder open menu is BACK dus vrij.
+
+### 7d. Besluit en gevolgen voor de hook
+
+**Voorstel: BACK vasthouden + pad = *generate* voor de track van die pad.** In het originele OS speelt die pad dan
+gewoon (de gebruiker merkt niets van BACK); met de mod vangt de hook de pad af: patroon maken, track kiezen, geen
+noot.
+
+- Plek: de pad-afhandeling van PadsView. Bij het indrukken `0x4007faf4(12)`: zo ja, *generate* (track = pad − 1) en
+  1 teruggeven; anders de stock-afnemer. Het loslaten van die pad gaat naar stock (de nootcel staat op −1, upstream
+  probe: dan geen noot-uit).
+- Upstream deed dit bij een eerdere versie van het akkoordenklavier met de twee pointers `0x4010025c` en
+  `0x401002b0` (thunk −16; alleen de eerste omleiden is niet genoeg, upstream 42 §2). `[FEIT]` Geen enkele tweak in
+  `tweaks/model-cycles_OS1.13/` schrijft nu in die pointers, in de thunk `0x4001d3d4` of in `0x4001d180` (scan
+  11/10/2026). `check_overlaps.py` controleert het opnieuw als de tweak er is.
+- In de vastgezette mute-modus (tweak `latching-mute`) vangt QuickMute de pads eerst af: daar werkt *generate* niet,
+  en dat is goed zo.
+- BACK + pad in een open menu: BACK sluit eerst het menu (stock), daarna geldt het hoofdscherm. Geen probleem.
+- **Op de machine te controleren door Niels** (stock OS): BACK vasthouden en T3 indrukken. Verwacht: T3 klinkt en
+  wordt geselecteerd, verder gebeurt er niets. Daarna BACK ~1 s vasthouden op het hoofdscherm: er gebeurt niets.

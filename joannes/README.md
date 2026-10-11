@@ -12,7 +12,7 @@ we nieuwe upstream-versies zonder conflicten kunnen binnenhalen. Onze tweaks vol
 | Functie | Status |
 |---|---|
 | Terug naar origineel (officiële OS ongewijzigd terugsturen) | bestaat al in de flasher van upstream (tab *Official firmware*); wordt bewaakt en prominenter gemaakt |
-| Random generators per track (JOANNES-stijl) | onderzoek: pattern-geheugen ([notitie 01](notes/01-pattern-geheugen.md)) |
+| Random generators per track (JOANNES-stijl) | onderzoek: pattern-geheugen en knoppen, *generate* = BACK + pad ([notitie 01](notes/01-pattern-geheugen.md)) |
 | 909-machine (gesynthetiseerd) | gepland, fase 3 |
 | Rave-stab engine | gepland, fase 3 |
 | Master-bus (compressor, EQ, widener) | bewust buiten scope |
@@ -43,3 +43,4 @@ installeer je zo:
 
 - [Ontwerp v0.1 (PDF)](docs/JOANNES-MOD%20ontwerp%20v0.1.pdf)
 - [Notitie 01: pattern-geheugen](notes/01-pattern-geheugen.md), bewijs: `python3 joannes/tools/probe_steps.py --cycles firmware/model-cycles_OS1.13.syx`
+  en `python3 joannes/tools/probe_pads.py --cycles firmware/model-cycles_OS1.13.syx` (vrije knoppencombinatie, §7)
